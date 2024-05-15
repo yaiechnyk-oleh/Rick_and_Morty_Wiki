@@ -21,6 +21,10 @@ type Character = {
     created: string;
 };
 
+type Episode = {
+    name: string;
+};
+
 type ModalProps = {
     characterID: number;
     onClose: () => void;
@@ -28,6 +32,7 @@ type ModalProps = {
 
 const Details: React.FC<ModalProps> = ({ characterID, onClose }) => {
     const [character, setCharacter] = useState<Character | null>(null);
+    const [firstEpisodeName, setFirstEpisodeName] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -37,8 +42,15 @@ const Details: React.FC<ModalProps> = ({ characterID, onClose }) => {
             setError(null);
             try {
                 const response = await fetch(`https://rickandmortyapi.com/api/character/${characterID}`);
-                const data = await response.json();
+                const data: Character = await response.json();
                 setCharacter(data);
+
+                // If the character has episodes listed, fetch the first episode's details
+                if (data.episode.length > 0) {
+                    const episodeResponse = await fetch(data.episode[0]);
+                    const episodeData: Episode = await episodeResponse.json();
+                    setFirstEpisodeName(episodeData.name);
+                }
             } catch (err) {
                 setError('Failed to fetch character details');
                 console.error(err);
@@ -56,17 +68,19 @@ const Details: React.FC<ModalProps> = ({ characterID, onClose }) => {
 
     return (
         <div className="fixed inset-0 bg-gray-800 bg-opacity-50 flex justify-center items-center p-4">
-            <div className="bg-white rounded-lg shadow-lg p-6 relative max-w-lg w-full">
-                <button onClick={onClose} className="absolute top-2 right-2 text-xl font-bold">&times;</button>
-                <h2 className="text-2xl font-bold mb-2">{character.name}</h2>
-                <p><strong>Status:</strong> {character.status}</p>
-                <p><strong>Species:</strong> {character.species}</p>
-                <p><strong>Type:</strong> {character.type}</p>
-                <p><strong>Gender:</strong> {character.gender}</p>
-                <p><strong>Origin:</strong> {character.origin.name}</p>
-                <p><strong>Last Known Location:</strong> {character.location.name}</p>
-                <img src={character.image} alt={character.name} className="w-full max-h-60 object-cover mt-4"/>
-                <p><strong>First Seen in Episodes:</strong> {character.episode.join(', ')}</p>
+            <div className="bg-white rounded-lg shadow-2xl p-6 relative max-w-lg w-full">
+                <button onClick={onClose} className="absolute h-10 w-10 top-2 right-2 text-xl font-bold">×</button>
+                <div className="flex flex-col items-center">
+                    <img src={character.image} alt={character.name} className="w-58 h-58 rounded-full mt-4" />
+                    <h2 className="text-2xl font-bold mt-2">{character.name}</h2>
+                    <div className="flex items-center mt-2">
+                        <span className={`rounded-full h-3 w-3 mr-2 ${character.status === 'Alive' ? 'bg-green-500' : 'bg-red-500'}`}></span>
+                        <p className="text-lg"><strong>{character.status} - {character.species}</strong></p>
+                    </div>
+                    <p className="mt-2"><strong>Origin:</strong> {character.origin.name}</p>
+                    <p className="mt-1"><strong>Last Known Location:</strong> {character.location.name}</p>
+                    {firstEpisodeName && <p className="mt-2"><strong>First Seen in Episode:</strong> {firstEpisodeName}</p>}
+                </div>
             </div>
         </div>
     );
